@@ -2,14 +2,9 @@
 import time
 import os
 import numpy as np
+import threading
 
-# deve ser chamada em paralelo
-def func(matriz):
-    #imprime a soma e a multiplicação ????
-    for i in matriz:
-        print(i, end="\t")
-    print()
-
+"""
 def getLinha(matriz, n):
     return [i for i in matriz[n]]
 
@@ -28,20 +23,19 @@ def multiplica_matriz(mat1, mat2):
             # e em seguida adiciona a matResultado a soma das multiplicações
             matResultado[i].append(sum(listMult))
     return matResultado
+"""    
+# deve ser chamada em paralelo
+def func(val1, val2, i, j, result):
+    result[i][j] = val1 + val2
+  
     
-
 #recebe e trata uma matriz
 def unroll(args, func, method, results):
-    #criando matrizes randomicamente usando as dimensões recebidas em args
-    m1 = np.random.randint(0,9,(args[0][0],args[0][1]))
-    m2 = np.random.randint(0,9,(args[1][0],args[1][1]))
-
     if method == 'proc':
         val = os.fork()
-
         if val == 0:
-            #matriz_multiplicada = multiplica_matriz(m1, m2)
             print("Matriz resultado")
+            """
             for indice in len(m1[0]):
                 linha_m1 = m1[indice]
                 coluna_m2 = m2[:, indice]
@@ -49,6 +43,7 @@ def unroll(args, func, method, results):
                 proc_linha = os.fork()
                 if proc_linha == 0:
                     func(linha_m1, coluna_m2)
+            """
         else:
             """
             print("Matriz 1")
@@ -61,11 +56,23 @@ def unroll(args, func, method, results):
                 func(i)
             print()            
             """
-#armazena os retornos de func
-results = []
+    else: # method == 'thre'
+        for row in args:
+            t = threading.Thread(target=func, args=(row[0], row[1], row[2], row[3], results))
+            t.start()
+        
 
-# envia qtd de linhas e colunas das matrizes
+#construindo matriz args
+args = [ [1, 5, 0, 0],
+         [2, 6, 0, 1],
+         [3, 7, 1, 0],
+         [4, 8, 1, 1] ]
+#populando matrizes de resultado
+matC_unroll = [[0 for i in range(2)] for i in range(2)]
+results = [[matC_unroll],
+           [matC_unroll],
+           [matC_unroll],
+           [matC_unroll]]
 
-unroll([[2,2],
-        [2,2]], func, 'proc', results)
-#unroll([[5,3],[1,6]], func, 'proc', results)]
+#unroll(args, func, 'proc', results)
+unroll(args, func, 'thre', results)]
