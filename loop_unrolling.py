@@ -26,40 +26,24 @@ def multiplica_matriz(mat1, mat2):
     urn matResultado
 """    
 # deve ser chamada em paralelo
-def func(val1, val2, i, j, result):
-    result_soma_thre[i][j] = val1 + val2
-  
+def func(val1, val2, i, j, metodo, result):
+    if metodo == 'thre':
+        result[0][0][i][j] = val1 + val2
+    else if metodo == 'proc':
+        result[0][1][i][j]
+    
     
 #recebe e trata uma matriz
 def unroll(args, func, method, results):
     if method == 'proc':
-        val = os.fork()
-        if val == 0:
-            print("Matriz resultado")
-            """
-            for indice in len(m1[0]):
-                linha_m1 = m1[indice]
-                coluna_m2 = m2[:, indice]
+        for row in args:
+            f = os.fork()
+            if f == 0:
+                func(row[0], row[1], row[2], row[3], metodo, results)
                 
-                proc_linha = os.fork()
-                if proc_linha == 0:
-                    func(linha_m1, coluna_m2)
-            """
-        else:
-            """
-            print("Matriz 1")
-            for i in m1:
-                func(i)
-            print()
-
-            print("Matriz 2")
-            for i in m2:
-                func(i)
-            print()            
-            """
     else: # method == 'thre'
         for row in args:
-            t = threading.Thread(target=func, args=(row[0], row[1], row[2], row[3], results))
+            t = threading.Thread(target=func, args=(row[0], row[1], row[2], row[3], metodo, results))
             t.start()
         
 
