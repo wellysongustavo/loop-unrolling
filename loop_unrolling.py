@@ -22,11 +22,12 @@ def multiplica_matriz(mat1, mat2):
             listMult = [x*y for x, y in zip(getLinha(mat1, i), getColuna(mat2, j))]
             # e em seguida adiciona a matResultado a soma das multiplicações
             matResultado[i].append(sum(listMult))
-    return matResultado
+    ret
+    urn matResultado
 """    
 # deve ser chamada em paralelo
 def func(val1, val2, i, j, result):
-    result[i][j] = val1 + val2
+    result_soma_thre[i][j] = val1 + val2
   
     
 #recebe e trata uma matriz
@@ -62,17 +63,34 @@ def unroll(args, func, method, results):
             t.start()
         
 
-#construindo matriz args
-args = [ [1, 5, 0, 0],
-         [2, 6, 0, 1],
-         [3, 7, 1, 0],
-         [4, 8, 1, 1] ]
-#populando matrizes de resultado
-matC_unroll = [[0 for i in range(2)] for i in range(2)]
-results = [[matC_unroll],
-           [matC_unroll],
-           [matC_unroll],
-           [matC_unroll]]
+#construindo duas matrizes para operar
+linhas = 3
+colunas = 3
+matriz_1 = np.random.randint(10, size=(linhas,colunas))
+matriz_2 = np.random.randint(10, size=(linhas,colunas))
+linha_args = 0
+args = np.full((linhas*colunas,4), 0)
+# populando args com os elementos da matriz 1, matriz 2, linhas e colunas
+for l in range(linhas):
+    for c in range(colunas):
+        args[linha_args][0] = matriz_1[l][c]
+        args[linha_args][1] = matriz_2[l][c]
+        args[linha_args][2] = l
+        args[linha_args][3] = c
+        linha_args = linha_args+1
+
+#criando matrizes de resultado
+result_soma_thre = np.full((linhas,colunas), 0)
+result_soma_proc = np.full((linhas,colunas), 0)
+result_mult_thre = np.full((linhas,colunas), 0)
+result_mult_proc = np.full((linhas,colunas), 0)
+results = [[result_soma_thre], #results[0][0]
+           [result_soma_proc], #results[1][0]
+           [result_mult_thre], #results[2][0]
+           [result_mult_proc]] #results[3][0]
 
 #unroll(args, func, 'proc', results)
-unroll(args, func, 'thre', results)]
+unroll(args, func, 'thre', results)
+print(matriz_1)
+print(matriz_2)
+print(results)
