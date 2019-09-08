@@ -4,77 +4,127 @@ import os
 import numpy as np
 import threading
 
-"""
-def getLinha(matriz, n):
-    return [i for i in matriz[n]]
 
-def getColuna(matriz, n):
-    return [i[n] for i in matriz]   
+"""-----------------------------------UNROLL E FUNC------------------------------------------"""
+"""------------------------------------------------------------------------------------------"""
 
-# função para multiplicar as matrizez
-def multiplica_matriz(mat1, mat2):
-    matResultado = []                 
-    for i in range(len(mat1)):           
-        matResultado.append([])
-
-        for j in range(len(mat1[0])):
-            # multiplica cada linha de mat1 por cada coluna de mat2;
-            listMult = [x*y for x, y in zip(getLinha(mat1, i), getColuna(mat2, j))]
-            # e em seguida adiciona a matResultado a soma das multiplicações
-            matResultado[i].append(sum(listMult))
-    ret
-    urn matResultado
-"""    
-# deve ser chamada em paralelo
-def func(val1, val2, i, j, metodo, result):
+# É chamada em paralelo
+def func(m1, m2, i, j, metodo, op, result):
     if metodo == 'thre':
-        result[0][0][i][j] = val1 + val2
-    else if metodo == 'proc':
-        result[0][1][i][j]
-    
+        if op == 'soma':
+            result[0][0][i][j] = m1 + m2
+
+        if op == 'multi':
+            for item in range(len(m1)):
+                result[2][0][i][j] += m1[item] * m2[item]
+        
+    if metodo == 'proc':
+        if op == 'soma':
+            # ERRO
+            os.aquire()
+            result[1][0][i][j] = m1 + m2
+            os.release()
+        if op == 'multi':
+            # ERRO
+            for item in range(len(m1)):
+                os.aquire()
+                result[3][0][i][j] += m1[item] * m2[item]
+                os.release()
     
 #recebe e trata uma matriz
-def unroll(args, func, method, results):
+def unroll(args, func, method, op, results):
     if method == 'proc':
-        for row in args:
+        for arg in args:
             f = os.fork()
             if f == 0:
-                func(row[0], row[1], row[2], row[3], metodo, results)
+                func(arg[0], arg[1], arg[2], arg[3], method, op, results)
+            else:
+                os.wait()
                 
     else: # method == 'thre'
-        for row in args:
-            t = threading.Thread(target=func, args=(row[0], row[1], row[2], row[3], metodo, results))
+        #soma
+        for arg in args:
+            t = threading.Thread(target=func, args=(arg[0], arg[1], arg[2], arg[3], method, op, results))
             t.start()
-        
+        #multiplicação
 
-#construindo duas matrizes para operar
-linhas = 3
-colunas = 3
-matriz_1 = np.random.randint(10, size=(linhas,colunas))
-matriz_2 = np.random.randint(10, size=(linhas,colunas))
-linha_args = 0
-args = np.full((linhas*colunas,4), 0)
-# populando args com os elementos da matriz 1, matriz 2, linhas e colunas
-for l in range(linhas):
-    for c in range(colunas):
-        args[linha_args][0] = matriz_1[l][c]
-        args[linha_args][1] = matriz_2[l][c]
-        args[linha_args][2] = l
-        args[linha_args][3] = c
-        linha_args = linha_args+1
+"""----------------------------------------GETS----------------------------------------------"""
+"""------------------------------------------------------------------------------------------"""
 
+def getColuna(matriz, c):
+    coluna = [0 for i in range(len(matriz))]
+    
+    for l in range(len(matriz[0])):
+        coluna[l] = matriz[l][c]
+    
+    return coluna
+
+def getArgsSoma():
+    args = [[0 for i in range(4)] for i in range(dimensao**2)]
+    linha_args = 0
+    for l in range(dimensao):
+        for c in range(dimensao):
+            args[linha_args] = [matriz_1[l][c], matriz_2[l][c], l, c]
+            linha_args += 1
+    return args
+
+def getArgsMultiplicacao():
+    args = [[0 for i in range(4)] for i in range(dimensao**2)]
+    linha_args = 0
+    for l in range(dimensao):
+        for c in range(dimensao):
+            args[linha_args] = [matriz_1[l], getColuna(matriz_2, c), l, c]
+            linha_args += 1
+    return args
+
+def getImpressao(matriz, dimensao, texto):
+    print(texto)
+    print('\n'.join([''.join(['{:4}'.format(item) for item in row]) for row in matriz]))
+    print('\n')
+
+"""------------------------------------MATRIZES----------------------------------------------"""
+"""------------------------------------------------------------------------------------------"""
+#construindo duas matrizes aleatórias para operar
+dimensao = 2
+matriz_1 = np.random.randint(10, size=(dimensao,dimensao))
+matriz_2 = np.random.randint(10, size=(dimensao,dimensao)) 
 #criando matrizes de resultado
-result_soma_thre = np.full((linhas,colunas), 0)
-result_soma_proc = np.full((linhas,colunas), 0)
-result_mult_thre = np.full((linhas,colunas), 0)
-result_mult_proc = np.full((linhas,colunas), 0)
+result_soma_thre = np.full((dimensao,dimensao), 0)
+result_soma_proc = np.full((dimensao,dimensao), 0)
+result_mult_thre = np.full((dimensao,dimensao), 0)
+result_mult_proc = np.full((dimensao,dimensao), 0)
 results = [[result_soma_thre], #results[0][0]
            [result_soma_proc], #results[1][0]
            [result_mult_thre], #results[2][0]
            [result_mult_proc]] #results[3][0]
 
-#unroll(args, func, 'proc', results)
-unroll(args, func, 'thre', results)
-print(matriz_1)
-print(matriz_2)
-print(results)
+
+"""------------------------------CHAMADAS USANDO THREADS-------------------------------------"""
+"""------------------------------------------------------------------------------------------"""
+# populando args para soma, com os elementos da matriz 1, matriz 2, linhas e colunas
+args = getArgsSoma()
+#chamando unroll para soma
+unroll(args, func, 'thre', 'soma', results)
+
+# populando args para multiplicação, com as linhas e colunas da matriz 1, matriz 2, index das linhas e colunas
+args = getArgsMultiplicacao()
+#chamando unroll para multiplicar
+unroll(args, func, 'thre', 'multi', results)
+
+"""------------------------------CHAMADAS USANDO PROCESSOS-------------------------------------"""
+"""------------------------------------------------------------------------------------------"""
+unroll(args, func, 'proc', 'soma', results)
+
+
+
+
+
+"""-----------------------------------IMPRESSÃO----------------------------------------------"""
+"""------------------------------------------------------------------------------------------"""
+getImpressao(matriz_1, dimensao, "Matriz 1:")
+getImpressao(matriz_2, dimensao, "Matriz 2:")
+getImpressao(results[0][0], dimensao**2, "Resultado da soma [THREADS]:")
+getImpressao(results[2][0], dimensao**2, "Resultado da multiplicação [THREADS]:")
+# ^ FUNCIONANDO
+"""\/ ERRO"""
+getImpressao(results[1][0], dimensao, "Resultado da soma [PROCESSOS]:")
