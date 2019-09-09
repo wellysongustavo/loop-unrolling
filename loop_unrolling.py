@@ -143,7 +143,7 @@ memory = posix_ipc.SharedMemory("test", flags = posix_ipc.O_CREAT, mode = 0o777,
 mapped_memory = mmap.mmap(memory.fd, memory.size)
 memory.close_fd()
 
-sem = posix_ipc.Semaphore("test_sem", flags = posix_ipc.O_CREAT, mode = 0o777, initial_value = 1)
+sem = posix_ipc.Semaphore("test", flags = posix_ipc.O_CREAT, mode = 0o777, initial_value = 1)
 
 unroll(args, func, 'proc', 'soma', results)
 
