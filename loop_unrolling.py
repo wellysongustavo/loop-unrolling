@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 import time
-import os
+import os, sys
+import mmap
+import signal
+import struct
+import posix_ipc
 import numpy as np
 import threading
 
@@ -21,15 +25,15 @@ def func(m1, m2, i, j, metodo, op, result):
     if metodo == 'proc':
         if op == 'soma':
             # ERRO
-            os.aquire()
+            sem.acquire()
             result[1][0][i][j] = m1 + m2
-            os.release()
+            sem.release()
         if op == 'multi':
             # ERRO
             for item in range(len(m1)):
-                os.aquire()
+                sem.acquire()
                 result[3][0][i][j] += m1[item] * m2[item]
-                os.release()
+                sem.release()
     
 #recebe e trata uma matriz
 def unroll(args, func, method, op, results):
@@ -98,6 +102,16 @@ results = [[result_soma_thre], #results[0][0]
            [result_mult_thre], #results[2][0]
            [result_mult_proc]] #results[3][0]
 
+"""------------------------INSTANCIANDO MEMORIA COMPARTILHADA--------------------------------"""
+"""------------------------------------------------------------------------------------------"""
+"""
+memoryInstance = posix_ipc.SharedMemory('instances', flags = posix_ipc.O_CREAT, mode = 0o777, size = 4)
+instances = mmap.mmap(memoryInstance.fd, memoryInstance.size)
+memoryInstance.close_fd()
+instances.seek(0)
+instances.write(struct.pack('i', dimensao))
+"""
+
 
 """------------------------------CHAMADAS USANDO THREADS-------------------------------------"""
 """------------------------------------------------------------------------------------------"""
@@ -113,7 +127,26 @@ unroll(args, func, 'thre', 'multi', results)
 
 """------------------------------CHAMADAS USANDO PROCESSOS-------------------------------------"""
 """------------------------------------------------------------------------------------------"""
+sizeResults = (dimensao**2)*4
+memory = posix_ipc.SharedMemory('result_soma_proc', flags = posix_ipc.O_CREAT, mode = 0o777, size = sizeResults)
+result_soma_proc = mmap.mmap(memory.fd, memory.size)
+memory.close_fd()
+
+sem = posix_ipc.Semaphore("test_sem", flags = posix_ipc.O_CREAT, mode = 0o777, initial_value = 1)
+
 unroll(args, func, 'proc', 'soma', results)
+
+while True:
+    sem.acquire()
+    memory.seek(0)
+    valueInstances = struct.unpack('i', memory.read(4))[0]
+    if valueInstances == 0:
+        sem.release()
+        break
+    sem.release()
+
+size = 'i'*(int(sizeResults / 4))
+result = list(struct.unpack(size, sizeResults))
 
 
 
