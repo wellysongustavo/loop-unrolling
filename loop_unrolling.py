@@ -15,6 +15,7 @@ import threading
 # É chamada em paralelo
 def func(m1, m2, i, j, metodo, op, result):
     if metodo == 'thre':
+        threading.currentThread()
         if op == 'soma':
             result[0][0][i][j] = m1 + m2
 
@@ -23,17 +24,18 @@ def func(m1, m2, i, j, metodo, op, result):
                 result[2][0][i][j] += m1[item] * m2[item]
         
     if metodo == 'proc':
+       
         if op == 'soma':
             # ERRO
-            sem.acquire()
             result[1][0][i][j] = m1 + m2
             sem.release()
+
         if op == 'multi':
             # ERRO
             for item in range(len(m1)):
-                sem.acquire()
+                #sem.acquire()
                 result[3][0][i][j] += m1[item] * m2[item]
-                sem.release()
+                #sem.release()
     
 #recebe e trata uma matriz
 def unroll(args, func, method, op, results):
@@ -41,9 +43,12 @@ def unroll(args, func, method, op, results):
         for arg in args:
             f = os.fork()
             if f == 0:
+                sem.acquire()
                 func(arg[0], arg[1], arg[2], arg[3], method, op, results)
+                sem.release()
             else:
-                os.wait()
+                pass
+                #os.wait()
                 
     else: # method == 'thre'
         #soma
@@ -104,13 +109,7 @@ results = [[result_soma_thre], #results[0][0]
 
 """------------------------INSTANCIANDO MEMORIA COMPARTILHADA--------------------------------"""
 """------------------------------------------------------------------------------------------"""
-"""
-memoryInstance = posix_ipc.SharedMemory('instances', flags = posix_ipc.O_CREAT, mode = 0o777, size = 4)
-instances = mmap.mmap(memoryInstance.fd, memoryInstance.size)
-memoryInstance.close_fd()
-instances.seek(0)
-instances.write(struct.pack('i', dimensao))
-"""
+
 
 
 """------------------------------CHAMADAS USANDO THREADS-------------------------------------"""
@@ -126,28 +125,27 @@ args = getArgsMultiplicacao()
 unroll(args, func, 'thre', 'multi', results)
 
 """------------------------------CHAMADAS USANDO PROCESSOS-------------------------------------"""
-"""------------------------------------------------------------------------------------------"""
-sizeResults = (dimensao**2)*4
-memory = posix_ipc.SharedMemory('result_soma_proc', flags = posix_ipc.O_CREAT, mode = 0o777, size = sizeResults)
-result_soma_proc = mmap.mmap(memory.fd, memory.size)
+"""--------------------------------------------------------------------------------------------"""
+
+mapped_memory = None
+ 
+def INT_handler(sig_num, arg):
+    if mapped_memory != None:
+        mapped_memory.close()
+        posix_ipc.unlink_shared_memory("test")
+        #desaloca a o semaforo 
+    sem.close()
+    sys.exit(0)
+ 
+signal.signal(signal.SIGINT, INT_handler)
+sizeResults = (dimensao**2)*4 
+memory = posix_ipc.SharedMemory("test", flags = posix_ipc.O_CREAT, mode = 0o777, size = sizeResults)
+mapped_memory = mmap.mmap(memory.fd, memory.size)
 memory.close_fd()
 
 sem = posix_ipc.Semaphore("test_sem", flags = posix_ipc.O_CREAT, mode = 0o777, initial_value = 1)
 
 unroll(args, func, 'proc', 'soma', results)
-
-while True:
-    sem.acquire()
-    memory.seek(0)
-    valueInstances = struct.unpack('i', memory.read(4))[0]
-    if valueInstances == 0:
-        sem.release()
-        break
-    sem.release()
-
-size = 'i'*(int(sizeResults / 4))
-result = list(struct.unpack(size, sizeResults))
-
 
 
 
@@ -158,6 +156,6 @@ getImpressao(matriz_1, dimensao, "Matriz 1:")
 getImpressao(matriz_2, dimensao, "Matriz 2:")
 getImpressao(results[0][0], dimensao**2, "Resultado da soma [THREADS]:")
 getImpressao(results[2][0], dimensao**2, "Resultado da multiplicação [THREADS]:")
-# ^ FUNCIONANDO
+# ^ FUNCIONANDO """
 """\/ ERRO"""
 getImpressao(results[1][0], dimensao, "Resultado da soma [PROCESSOS]:")
