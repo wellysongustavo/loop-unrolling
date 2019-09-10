@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import time
+import timeit
 import os, sys
 import mmap
 import signal
@@ -104,7 +104,7 @@ def getImpressao(matriz, dimensao, texto):
 """------------------------------------MATRIZES----------------------------------------------"""
 """------------------------------------------------------------------------------------------"""
 #construindo duas matrizes aleatórias para operar
-dimensao = 2
+dimensao = 100
 matriz_1 = np.random.randint(10, size=(dimensao,dimensao))
 matriz_2 = np.random.randint(10, size=(dimensao,dimensao)) 
 #criando matrizes de resultado
@@ -121,23 +121,44 @@ results = [[result_soma_thre], #results[0][0]
 """------------------------------------------------------------------------------------------"""
 
 args = getArgsSoma()
+
+inicio_seq_soma = timeit.default_timer()
 unroll(args, func, 'seq', 'soma', results)
+fim_seq_soma = timeit.default_timer()
+with open('soma_sequencial.txt', 'a') as file:
+    file.write(str(fim_seq_soma-inicio_seq_soma)+"\n")
 
 args = getArgsMultiplicacao()
+
+inicio_seq_mult = timeit.default_timer()
 unroll(args, func, 'seq', 'multi', results)
+fim_seq_mult = timeit.default_timer()
+with open('multiplicacao_sequencial.txt', 'a') as file:
+    file.write(str(fim_seq_mult-inicio_seq_mult)+"\n")
+
 
 
 """------------------------------CHAMADAS USANDO THREADS-------------------------------------"""
 """------------------------------------------------------------------------------------------"""
 # populando args para soma, com os elementos da matriz 1, matriz 2, linhas e colunas
 args = getArgsSoma()
-#chamando unroll para soma
+
+#chamando unroll para soma e calculando tempo de função
+inicio_thre_soma = timeit.default_timer()
 unroll(args, func, 'thre', 'soma', results)
+fim_thre_soma = timeit.default_timer()
+with open('soma_paralela_thread.txt', 'a') as file:
+    file.write(str(fim_thre_soma-inicio_thre_soma)+"\n")
 
 # populando args para multiplicação, com as linhas e colunas da matriz 1, matriz 2, index das linhas e colunas
 args = getArgsMultiplicacao()
+
 #chamando unroll para multiplicar
+inicio_thre_mult = timeit.default_timer()
 unroll(args, func, 'thre', 'multi', results)
+fim_thre_mult = timeit.default_timer()
+with open('multiplicacao_paralela_thread.txt', 'a') as file:
+    file.write(str(fim_thre_mult-inicio_thre_mult)+"\n")
 
 """------------------------------CHAMADAS USANDO PROCESSOS-------------------------------------"""
 """--------------------------------------------------------------------------------------------"""
